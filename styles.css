@@ -1,0 +1,141 @@
+:root {
+  /* Light UI to match screenshots */
+  --bg: #F2F2F2;            /* page background */
+  --panel: #ffffff;         /* card background */
+  --text: #262626;          /* primary text */
+  --muted: #757575;         /* secondary text */
+  --border: #e5e7eb;        /* card borders */
+  --chip-bg: #f3f4f6;       /* tab background */
+  --chip-border: #e5e7eb;
+  --accent: #505C95;        /* plus icon color */
+  --accent-text: #ffffff;
+  --danger: #e74b4b;
+  --radius: 14px;
+  --shadow: none;
+  /* set tiles backgrounds */
+  --set-bg: #f2f2f2;
+  --set-bg-alt: #ffffff;
+  /* tabs */
+  --tab-bg: transparent;
+  --tab-border: var(--chip-border);
+  --tab-active-bg: var(--panel);
+  --tab-active-border: var(--border);
+  /* tab count badge */
+  --tab-count-bg: #ffffff;
+  --tab-count-color: #757575;
+  --tab-count-border: var(--border);
+}
+
+/* Dark theme (Material-inspired) */
+:root[data-theme="dark"] {
+  --bg: #121212;            /* M3 baseline dark background */
+  --panel: #1E1E1E;         /* Surface container */
+  --text: #E6E6E6;          /* High-emphasis on dark */
+  --muted: #A5A5A5;         /* Medium-emphasis on dark */
+  --border: #2A2A2A;        /* Outlines subdued */
+  --chip-bg: #202022;       /* Assist/chips */
+  --chip-border: #2A2A2A;
+  --accent: #8EA4FF;        /* Slightly brighter accent on dark */
+  --accent-text: #0B0B0B;   /* Dark text on bright accent */
+  --danger: #ff6b6b;        /* Danger on dark */
+  --shadow: none;
+  /* set tiles backgrounds on dark */
+  --set-bg: #242424;
+  --set-bg-alt: #2E2E2E;
+  /* tabs on dark: increase contrast for active */
+  --tab-bg: transparent;
+  --tab-border: #2a2a2a;
+  --tab-active-bg: #2e2e2e;
+  --tab-active-border: #3a3a3a;
+  /* tab count badge on dark */
+  --tab-count-bg: #2a2a2a;
+  --tab-count-color: #E6E6E6;
+  --tab-count-border: #3a3a3a;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
+body { background: var(--bg); color: var(--text); }
+
+#app { max-width: 480px; margin: 0 auto; padding: 8px 16px 28px; }
+
+.app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 2px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo { font-size: 18px; }
+.brand h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.2px; }
+.header-actions { display: flex; gap: 8px; }
+
+.icon-btn { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px; width: 36px; height: 36px; display: grid; place-items: center; box-shadow: var(--shadow); cursor: pointer; }
+.icon-btn.primary { background: var(--accent); color: var(--accent-text); border: 1px solid transparent; font-weight: 800; }
+.icon-btn .material-symbols-outlined { font-size: 20px; line-height: 1; }
+.app-header .icon-btn { width: 36px; height: 36px; border-radius: 12px; }
+.app-header .icon-btn .material-symbols-outlined { font-size: 20px; color: var(--text); }
+
+.tabs { display: flex; gap: 10px; padding: 6px 2px 12px; overflow-x: auto; scrollbar-width: none; position: sticky; top: 0; background: linear-gradient(var(--bg), var(--bg)); z-index: 5; white-space: nowrap; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 8px 12px; border-radius: 20px; background: var(--tab-bg); color: var(--muted); border: 1px solid var(--tab-border); cursor: pointer; white-space: nowrap; font-weight: 700; }
+.tab.active { background: var(--tab-active-bg); color: var(--text); border-color: var(--tab-active-border); box-shadow: var(--shadow); }
+.tab .count { margin-left: 6px; font-size: 11px; color: var(--tab-count-color); background: var(--tab-count-bg); border: 1px solid var(--tab-count-border); padding: 2px 6px; border-radius: 12px; }
+
+main { display: grid; gap: 8px; }
+
+.section-title { margin: 8px 6px 0; font-size: 16px; color: var(--text); font-weight: 700; }
+.category-title { margin: 16px 6px 8px; font-size: 20px; font-weight: 700; }
+/* Detail screen specific spacing for Workout History heading */
+.detail .section-title { margin: 16px 6px; }
+
+.exercise-card { background: var(--panel); border: none; border-radius: 16px; padding: 16px; box-shadow: var(--shadow); cursor: pointer; position: relative; padding-right: 56px; }
+.exercise-card + .exercise-card { margin-top: 8px; }
+.exercise-card .card-head { display: flex; align-items: center; justify-content: space-between; }
+.exercise-card .title { margin: 0; font-size: 16px; font-weight: 700; }
+.detail .title { font-size: 20px; font-weight: 700; }
+.exercise-card .card-actions { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; }
+.exercise-card .card-actions .icon-btn { margin: 0; }
+.summary { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 8px; align-items: center; margin-top: 6px; color: var(--muted); }
+.summary .label { font-size: 14px; font-weight: 500; }
+.summary .value { color: var(--text); font-weight: 600; font-size: 14px; }
+
+.detail-header { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; padding: 10px 0; }
+.detail-header h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.detail-header .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.detail .right-actions { display: flex; gap: 8px; }
+
+.history { display: grid; gap: 12px; }
+.day { background: var(--panel); border: none; border-radius: 16px; padding: 16px; }
+.day-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.day-head .date { color: var(--text); display: flex; align-items: center; gap: 8px; }
+.day-head .date .material-symbols-outlined { font-size: 20px; color: var(--muted); }
+.day-head .date .date-text { font-size: 14px; font-weight: 600; }
+.day-actions { display: flex; gap: 8px; }
+.set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.set { background: var(--set-bg); border: none; border-radius: 12px; padding: 16px; text-align: center; }
+/* Remove borders from action icons inside cards */
+.exercise-card .icon-btn, .day .icon-btn { border: none; width: 20px; height: 20px; padding: 0; border-radius: 6px; }
+.exercise-card .icon-btn .material-symbols-outlined, .day .icon-btn .material-symbols-outlined { font-size: 18px; }
+.day .icon-btn.delete .material-symbols-outlined { color: #D34545; }
+.set .weight { font-weight: 900; font-size: 17px; }
+.set .caption { color: var(--muted); margin-top: 4px; font-size: 13px; }
+
+/* Workout history page tweaks */
+.detail .history .day:not(:first-child) { background: transparent; padding-top: 0; padding-bottom: 0; }
+.detail .history .day:not(:first-child) .set { background: var(--set-bg-alt); }
+.detail .history .day:not(:first-child) .day-actions { display: none; }
+
+dialog#modal { border: none; border-radius: 16px; padding: 0; background: var(--panel); color: var(--text); max-width: 420px; width: calc(100% - 24px); }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+.modal-body { padding: 16px; display: grid; gap: 12px; }
+.field { display: grid; gap: 6px; }
+.field label { color: var(--muted); font-size: 13px; }
+.field input, .field select { background: #ffffff; border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px; font-size: 16px; }
+.modal-actions { display: flex; gap: 8px; padding: 12px 16px 16px; }
+.btn { flex: 1; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-weight: 800; cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--accent-text); border: 1px solid transparent; }
+.btn.danger { background: #ffe9ea; border-color: #ffd5d8; color: #b91c1c; }
+
+/* Small visual nits to resemble screenshots */
+
+@media (min-width: 480px) {
+  #app { padding-top: 16px; }
+}
+
+
