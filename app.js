@@ -33,19 +33,37 @@ function saveData(data) {
 
 function createSeed() {
   const today = new Date();
-  const d = (n) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - n);
+  const daysAgo = (n) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - n);
   const fmt = (dt) => dt.toISOString().slice(0,10);
-  const entries = [0,1,2,3].map((i)=>({ id: uid(), date: fmt(d(i)), warmup: 10, working: 20 }));
-  return {
-    exercises: [
-      { id: uid(), name: 'Biceps in machine', category: 'Arms', entries: structuredClone(entries) },
-      { id: uid(), name: 'Biceps in machine', category: 'Legs', entries: structuredClone(entries) },
-      { id: uid(), name: 'Biceps in machine', category: 'Chest', entries: structuredClone(entries) },
-      { id: uid(), name: 'Biceps in machine', category: 'Back', entries: structuredClone(entries) },
-      { id: uid(), name: 'Biceps in machine', category: 'Shoulders', entries: structuredClone(entries) },
-      { id: uid(), name: 'Biceps in machine', category: 'Arms', entries: structuredClone(entries) },
-    ]
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  /** Sample exercise names per category */
+  const sampleNamesByCategory = {
+    Arms: ['Biceps Curl', 'Triceps Pushdown', 'Hammer Curl', 'EZ-Bar Curl', 'Cable Curl'],
+    Legs: ['Squat', 'Leg Press', 'Lunges', 'Romanian Deadlift', 'Leg Extension'],
+    Chest: ['Bench Press', 'Incline Dumbbell Press', 'Chest Fly', 'Cable Crossover', 'Push-up'],
+    Back: ['Lat Pulldown', 'Seated Row', 'Deadlift', 'Pull-up', 'T-Bar Row'],
+    Shoulders: ['Overhead Press', 'Lateral Raise', 'Front Raise', 'Rear Delt Fly', 'Arnold Press']
   };
+
+  const exercises = [];
+  // Generate 1–2 unique exercises per category
+  ;['Arms','Legs','Chest','Back','Shoulders'].forEach((category) => {
+    const names = [...sampleNamesByCategory[category]];
+    const howMany = randInt(1, 2);
+    for (let i = 0; i < howMany && names.length; i++) {
+      const name = names.splice(randInt(0, names.length - 1), 1)[0];
+      const entries = [0,1,2,3].map((d) => ({
+        id: uid(),
+        date: fmt(daysAgo(d)),
+        warmup: randInt(5, 30) * 1,      // 5–30 kg
+        working: randInt(30, 120) * 1    // 30–120 kg
+      }));
+      exercises.push({ id: uid(), name, category, entries });
+    }
+  });
+
+  return { exercises };
 }
 
 let state = loadData();
