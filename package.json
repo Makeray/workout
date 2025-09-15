@@ -1,0 +1,9 @@
+{
+  "name": "workout-diary",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static Workout Diary (HTML/CSS/JS)",
+  "scripts": {
+    "build": "echo No build step needed for static site"
+  }
+}
