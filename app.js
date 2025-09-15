@@ -366,12 +366,25 @@ function setupThemeToggle() {
   });
 }
 
+// Navigation state management
+let currentScreen = 'home';
+let currentCategory = 'All';
+
 // Top-level add
 $('#addExerciseBtn').addEventListener('click', ()=> openExerciseForm());
 
 // Initialize theme
 initTheme();
 setupThemeToggle();
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (event) => {
+  if (event.state && event.state.screen === 'detail') {
+    renderDetail(event.state.exerciseId);
+  } else {
+    renderHome(event.state?.category || 'All');
+  }
+});
 
 // Start app rendering
 function showGlobalChrome(show) {
@@ -382,10 +395,35 @@ function showGlobalChrome(show) {
 // Hook back button in detail to restore header/tabs
 const origRenderHome = renderHome;
 renderHome = function(active='All') {
+  currentScreen = 'home';
+  currentCategory = active;
   showGlobalChrome(true);
+  
+  // Update browser history
+  const state = { screen: 'home', category: active };
+  if (window.history.state?.screen !== 'home' || window.history.state?.category !== active) {
+    window.history.pushState(state, '', window.location.pathname);
+  }
+  
   return origRenderHome(active);
 }
 
+// Hook detail rendering to update history
+const origRenderDetail = renderDetail;
+renderDetail = function(exId) {
+  currentScreen = 'detail';
+  showGlobalChrome(false);
+  
+  // Update browser history
+  const state = { screen: 'detail', exerciseId: exId };
+  window.history.pushState(state, '', window.location.pathname);
+  
+  return origRenderDetail(exId);
+}
+
+// Initialize with home screen
+const initialState = { screen: 'home', category: 'All' };
+window.history.replaceState(initialState, '', window.location.pathname);
 renderHome('All');
 
 
