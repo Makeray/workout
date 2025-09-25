@@ -31,6 +31,42 @@ function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function isValidDataShape(obj) {
+  if (!obj || typeof obj !== 'object') return false;
+  if (!Array.isArray(obj.exercises)) return false;
+  return obj.exercises.every((ex)=> ex && typeof ex.id==='string' && typeof ex.name==='string' && typeof ex.category==='string' && Array.isArray(ex.entries));
+}
+
+async function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'workout-diary-export.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importDataFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(String(reader.result||'{}'));
+      if (!isValidDataShape(obj)) throw new Error('Invalid file');
+      (obj.exercises||[]).forEach((ex)=>{ if (ex.category==='Arms') ex.category='Biceps'; });
+      state = obj;
+      saveData(state);
+      renderHome('All');
+    } catch (e) {
+      alert('Import failed. Please select a valid export file.');
+    }
+  };
+  reader.onerror = () => alert('Failed to read file');
+  reader.readAsText(file);
+}
+
 function createSeed() {
   const today = new Date();
   const daysAgo = (n) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - n);
@@ -79,6 +115,60 @@ const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
 const appScreen = $('#screen');
 const tabsNav = $('#categoryTabs');
+const importFileInput = $('#importFile');
+
+// Persisted custom order for categories (excluding 'All')
+const ORDER_KEY = 'category_order_v1';
+
+function loadCategoryOrder() {
+  try {
+    const raw = localStorage.getItem(ORDER_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function saveCategoryOrder(order) {
+  try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch {}
+}
+
+function computeOrderedCategories() {
+  const saved = loadCategoryOrder();
+  const all = Categories.filter(c => c !== 'All');
+  // Keep only existing categories from saved
+  const kept = saved.filter(c => all.includes(c));
+  // Append any new categories not present in saved
+  const extras = all.filter(c => !kept.includes(c));
+  return ['All', ...kept, ...extras];
+}
+
+let draggingCategory = null;
+
+function onTabDragStart(e) {
+  const cat = e.currentTarget?.dataset?.category;
+  if (!cat || cat === 'All') return;
+  draggingCategory = cat;
+  try { e.dataTransfer.setData('text/plain', cat); } catch {}
+}
+
+function onTabDragOver(e) {
+  e.preventDefault();
+}
+
+function onTabDrop(e, dropCat) {
+  e.preventDefault();
+  if (!draggingCategory || !dropCat || draggingCategory === dropCat) return;
+  const current = computeOrderedCategories().filter(c => c !== 'All');
+  const fromIdx = current.indexOf(draggingCategory);
+  const toIdx = current.indexOf(dropCat);
+  if (fromIdx === -1 || toIdx === -1) return;
+  const next = [...current];
+  next.splice(toIdx, 0, next.splice(fromIdx, 1)[0]);
+  saveCategoryOrder(next);
+  draggingCategory = null;
+  renderHome(currentCategory || 'All');
+}
 
 // Distinct accent palettes per category for card left borders
 const CATEGORY_ACCENT_PALETTES = {
@@ -105,11 +195,19 @@ function getAccentColor(category, stableKey) {
 
 function renderTabs(active='All') {
   tabsNav.innerHTML = '';
-  Categories.forEach((c) => {
+  const ordered = computeOrderedCategories();
+  ordered.forEach((c) => {
     const count = c === 'All' ? state.exercises.length : state.exercises.filter(e=>e.category===c).length;
     const btn = document.createElement('button');
     btn.className = 'tab' + (c===active ? ' active':'');
     btn.textContent = c;
+    btn.dataset.category = c;
+    if (c !== 'All') {
+      btn.draggable = true;
+      btn.addEventListener('dragstart', onTabDragStart);
+      btn.addEventListener('dragover', onTabDragOver);
+      btn.addEventListener('drop', (ev)=> onTabDrop(ev, c));
+    }
     const small = document.createElement('span');
     small.className = 'count';
     small.textContent = count.toString();
@@ -129,8 +227,8 @@ function renderHome(active='All') {
 
   const container = document.createElement('div');
   const grouped = groupByCategory(state.exercises);
-  const cats = ['Biceps','Tricesp','Legs','Chest','Back','Shoulders'];
-  cats.forEach((cat) => {
+  const ordered = computeOrderedCategories().filter(c=>c!=='All');
+  ordered.forEach((cat) => {
     if (active !== 'All' && active !== cat) return;
     const list = grouped[cat] || [];
     if (!list.length) return;
@@ -153,9 +251,7 @@ function renderExerciseCard(ex) {
   const node = tpl.content.firstElementChild.cloneNode(true);
   // Tag card with category class for styling (Figma left-border colors)
   try { node.classList.add(`cat-${String(ex.category || '').toLowerCase()}`); } catch {}
-  // Assign a deterministic accent per item so cards within a category differ
-  const accent = getAccentColor(ex.category, ex.id || ex.name || 'x');
-  if (accent) { try { node.style.borderLeftColor = accent; } catch {} }
+  // Keep category border color uniform via CSS; don't override per card
   $('.title', node).textContent = ex.name;
   const latest = latestEntry(ex);
   $('.summary .warmup', node).textContent = latest ? `${latest.warmup}kg` : '-';
@@ -405,6 +501,27 @@ let currentCategory = 'All';
 
 // Top-level add
 $('#addExerciseBtn').addEventListener('click', ()=> openExerciseForm());
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsMenu = document.getElementById('settingsMenu');
+if (settingsBtn) settingsBtn.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  if (settingsMenu) settingsMenu.style.display = settingsMenu.style.display === 'none' ? '' : 'none';
+});
+if (settingsMenu) {
+  const hide = ()=> { if (settingsMenu) settingsMenu.style.display = 'none'; };
+  document.addEventListener('click', hide);
+  settingsMenu.addEventListener('click', (e)=> e.stopPropagation());
+}
+const menuExport = document.getElementById('menuExport');
+if (menuExport) menuExport.addEventListener('click', ()=> { exportData(); if (settingsMenu) settingsMenu.style.display='none'; });
+const menuImport = document.getElementById('menuImport');
+if (menuImport) menuImport.addEventListener('click', ()=> { if (importFileInput) importFileInput.click(); });
+if (importFileInput) importFileInput.addEventListener('change', (e)=>{
+  const file = e.target?.files?.[0];
+  if (file) importDataFromFile(file);
+  if (importFileInput) importFileInput.value = '';
+  if (settingsMenu) settingsMenu.style.display='none';
+});
 
 // Initialize theme
 initTheme();

@@ -21,6 +21,11 @@
         </div>
         <div class="header-actions">
           <button id="themeToggleBtn" class="icon-btn" aria-label="Toggle theme"><span class="material-symbols-outlined">dark_mode</span></button>
+          <button id="settingsBtn" class="icon-btn" title="Settings" aria-label="Settings"><span class="material-symbols-outlined">tune</span></button>
+          <div id="settingsMenu" class="menu" style="display:none">
+            <button class="menu-item" id="menuExport" type="button">Export data</button>
+            <button class="menu-item" id="menuImport" type="button">Import data</button>
+          </div>
           <button id="addExerciseBtn" class="icon-btn"><span class="material-symbols-outlined">add</span></button>
         </div>
       </header>
@@ -91,6 +96,8 @@
     <dialog id="modal">
       <form id="modalForm" method="dialog"></form>
     </dialog>
+
+    <input id="importFile" type="file" accept="application/json" style="display:none" />
 
     <script src="./app.js"></script>
     <script>
