@@ -1,10 +1,10 @@
 // Storage and state
 const STORAGE_KEY = 'workout_diary_v1';
 
-/** @typedef {{ id:string, name:string, category:'Arms'|'Legs'|'Chest'|'Back'|'Shoulders', entries: WorkoutEntry[] }} Exercise */
+/** @typedef {{ id:string, name:string, category:'Biceps'|'Tricesp'|'Legs'|'Chest'|'Back'|'Shoulders', entries: WorkoutEntry[] }} Exercise */
 /** @typedef {{ id:string, date:string, warmup:number, working:number }} WorkoutEntry */
 
-const Categories = ['All','Arms','Legs','Chest','Shoulders','Back'];
+const Categories = ['All','Biceps','Tricesp','Legs','Chest','Shoulders','Back'];
 
 /** Simple uid */
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -39,7 +39,8 @@ function createSeed() {
 
   /** Sample exercise names per category */
   const sampleNamesByCategory = {
-    Arms: ['Biceps Curl', 'Triceps Pushdown', 'Hammer Curl', 'EZ-Bar Curl', 'Cable Curl'],
+    Biceps: ['Biceps Curl', 'Hammer Curl', 'EZ-Bar Curl', 'Cable Curl'],
+    Tricesp: ['Triceps Pushdown'],
     Legs: ['Squat', 'Leg Press', 'Lunges', 'Romanian Deadlift', 'Leg Extension'],
     Chest: ['Bench Press', 'Incline Dumbbell Press', 'Chest Fly', 'Cable Crossover', 'Push-up'],
     Back: ['Lat Pulldown', 'Seated Row', 'Deadlift', 'Pull-up', 'T-Bar Row'],
@@ -48,7 +49,7 @@ function createSeed() {
 
   const exercises = [];
   // Generate 1–2 unique exercises per category
-  ;['Arms','Legs','Chest','Back','Shoulders'].forEach((category) => {
+  ;['Biceps','Tricesp','Legs','Chest','Back','Shoulders'].forEach((category) => {
     const names = [...sampleNamesByCategory[category]];
     const howMany = randInt(1, 2);
     for (let i = 0; i < howMany && names.length; i++) {
@@ -68,12 +69,39 @@ function createSeed() {
 
 let state = loadData();
 
+// Migration: map legacy 'Arms' category to 'Biceps'
+state.exercises.forEach((ex)=>{ if (ex.category === 'Arms') ex.category = 'Biceps'; });
+saveData(state);
+
 // UI helpers
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
 const appScreen = $('#screen');
 const tabsNav = $('#categoryTabs');
+
+// Distinct accent palettes per category for card left borders
+const CATEGORY_ACCENT_PALETTES = {
+  Biceps: ['#E57373', '#64B5F6', '#81C784', '#FFB74D'],
+  Tricesp: ['#FFD54F', '#FFC107', '#FFEE58', '#FBC02D'],
+  Shoulders: ['#4FC3F7', '#AED581', '#FF8A65', '#9575CD'],
+  Legs: ['#7E57C2', '#8E24AA', '#5E35B1', '#9575CD'],
+  Chest: ['#FF7043', '#EF5350', '#FBC02D', '#8D6E63'],
+  Back: ['#66BB6A', '#81D4FA', '#FFCC80', '#CE93D8']
+};
+
+function hashStringToInt(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h >>> 0;
+}
+
+function getAccentColor(category, stableKey) {
+  const palette = CATEGORY_ACCENT_PALETTES[category];
+  if (!palette || !palette.length) return null;
+  const idx = hashStringToInt(String(stableKey)) % palette.length;
+  return palette[idx];
+}
 
 function renderTabs(active='All') {
   tabsNav.innerHTML = '';
@@ -101,7 +129,7 @@ function renderHome(active='All') {
 
   const container = document.createElement('div');
   const grouped = groupByCategory(state.exercises);
-  const cats = ['Arms','Legs','Chest','Back','Shoulders'];
+  const cats = ['Biceps','Tricesp','Legs','Chest','Back','Shoulders'];
   cats.forEach((cat) => {
     if (active !== 'All' && active !== cat) return;
     const list = grouped[cat] || [];
@@ -123,6 +151,11 @@ function groupByCategory(items) {
 function renderExerciseCard(ex) {
   const tpl = $('#exercise-card-tpl');
   const node = tpl.content.firstElementChild.cloneNode(true);
+  // Tag card with category class for styling (Figma left-border colors)
+  try { node.classList.add(`cat-${String(ex.category || '').toLowerCase()}`); } catch {}
+  // Assign a deterministic accent per item so cards within a category differ
+  const accent = getAccentColor(ex.category, ex.id || ex.name || 'x');
+  if (accent) { try { node.style.borderLeftColor = accent; } catch {} }
   $('.title', node).textContent = ex.name;
   const latest = latestEntry(ex);
   $('.summary .warmup', node).textContent = latest ? `${latest.warmup}kg` : '-';
@@ -199,7 +232,7 @@ function openExerciseForm(exercise) {
     <div class="field">
       <label>Category</label>
       <select name="category">
-        ${['Arms','Legs','Chest','Back','Shoulders'].map(c=>`<option ${exercise?.category===c?'selected':''}>${c}</option>`).join('')}
+        ${['Biceps','Tricesp','Legs','Chest','Back','Shoulders'].map(c=>`<option ${exercise?.category===c?'selected':''}>${c}</option>`).join('')}
       </select>
     </div>`;
   modalForm.appendChild(body);
