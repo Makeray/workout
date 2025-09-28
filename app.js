@@ -38,33 +38,184 @@ function isValidDataShape(obj) {
 }
 
 async function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'workout-diary-export.json';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  try {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    
+    // Проверяем, поддерживается ли File System Access API (современные браузеры)
+    if ('showSaveFilePicker' in window) {
+      try {
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: 'workout-diary-export.json',
+          types: [{
+            description: 'JSON files',
+            accept: { 'application/json': ['.json'] }
+          }]
+        });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.warn('File System Access API failed, falling back to download:', error);
+        }
+      }
+    }
+    
+    // Fallback для старых браузеров и APK приложений
+    const url = URL.createObjectURL(blob);
+    
+    // Пробуем несколько методов для разных окружений
+    try {
+      // Метод 1: Стандартный download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'workout-diary-export.json';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Небольшая задержка перед очисткой URL
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.warn('Standard download failed, trying alternative method:', error);
+      
+      // Метод 2: Альтернативный способ для APK
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'workout-diary-export.json';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        
+        // Добавляем событие для принудительного скачивания
+        const event = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: true
+        });
+        
+        document.body.appendChild(link);
+        link.dispatchEvent(event);
+        document.body.removeChild(link);
+        
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (altError) {
+        console.error('All download methods failed:', altError);
+        
+        // Метод 3: Показываем данные в новом окне для копирования
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>Workout Diary Export</title>
+                <style>
+                  body { font-family: monospace; padding: 20px; }
+                  pre { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+                  button { padding: 10px 20px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+                </style>
+              </head>
+              <body>
+                <h2>Workout Diary Export</h2>
+                <p>Copy the data below and save it as a .json file:</p>
+                <button onclick="navigator.clipboard.writeText(document.querySelector('pre').textContent).then(() => alert('Copied to clipboard!'))">Copy to Clipboard</button>
+                <pre>${data}</pre>
+              </body>
+            </html>
+          `);
+          newWindow.document.close();
+        } else {
+          // Последний fallback - показываем alert с данными
+          alert('Export data (copy this text and save as .json file):\n\n' + data.substring(0, 500) + (data.length > 500 ? '...' : ''));
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Export failed:', error);
+    alert('Export failed. Please try again or contact support.');
+  }
 }
 
 function importDataFromFile(file) {
+  if (!file) {
+    console.warn('No file provided for import');
+    return;
+  }
+  
   const reader = new FileReader();
+  
   reader.onload = () => {
     try {
-      const obj = JSON.parse(String(reader.result||'{}'));
-      if (!isValidDataShape(obj)) throw new Error('Invalid file');
-      (obj.exercises||[]).forEach((ex)=>{ if (ex.category==='Arms') ex.category='Biceps'; });
+      const text = String(reader.result || '{}');
+      const obj = JSON.parse(text);
+      
+      if (!isValidDataShape(obj)) {
+        throw new Error('Invalid file format');
+      }
+      
+      // Миграция данных
+      (obj.exercises || []).forEach((ex) => {
+        if (ex.category === 'Arms') ex.category = 'Biceps';
+      });
+      
+      // Обновляем состояние
       state = obj;
       saveData(state);
       renderHome('All');
+      
+      // Показываем подтверждение
+      alert('Data imported successfully!');
+      
     } catch (e) {
+      console.error('Import failed:', e);
       alert('Import failed. Please select a valid export file.');
     }
   };
-  reader.onerror = () => alert('Failed to read file');
+  
+  reader.onerror = () => {
+    console.error('Failed to read file');
+    alert('Failed to read file. Please try again.');
+  };
+  
   reader.readAsText(file);
+}
+
+// Добавляем новую функцию для экспорта в буфер обмена
+async function exportToClipboard() {
+  try {
+    const data = JSON.stringify(state, null, 2);
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(data);
+      alert('Data copied to clipboard! You can now paste it into a text file and save as .json');
+    } else {
+      // Fallback для старых браузеров
+      const textArea = document.createElement('textarea');
+      textArea.value = data;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        alert('Data copied to clipboard! You can now paste it into a text file and save as .json');
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+        alert('Failed to copy to clipboard. Please try the regular export method.');
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+  } catch (error) {
+    console.error('Clipboard export failed:', error);
+    alert('Failed to copy to clipboard. Please try the regular export method.');
+  }
 }
 
 function createSeed() {
@@ -514,6 +665,8 @@ if (settingsMenu) {
 }
 const menuExport = document.getElementById('menuExport');
 if (menuExport) menuExport.addEventListener('click', ()=> { exportData(); if (settingsMenu) settingsMenu.style.display='none'; });
+const menuExportClipboard = document.getElementById('menuExportClipboard');
+if (menuExportClipboard) menuExportClipboard.addEventListener('click', ()=> { exportToClipboard(); if (settingsMenu) settingsMenu.style.display='none'; });
 const menuImport = document.getElementById('menuImport');
 if (menuImport) menuImport.addEventListener('click', ()=> { if (importFileInput) importFileInput.click(); });
 if (importFileInput) importFileInput.addEventListener('change', (e)=>{
